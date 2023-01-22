@@ -6,6 +6,7 @@ import java.util.Arrays;
 import java.util.List;
 
 public class GenerateAst {
+
     public static void main(String[] args) throws IOException {
         if (args.length != 1) {
             System.err.println("Usage: generate_ast <output_directory>");
@@ -33,15 +34,38 @@ public class GenerateAst {
         writer.println();
         writer.println("abstract class "+  baseName + " {");
 
+        defineVisitor(writer, baseName, types);
+
         for (String type : types) {
             String className = type.split(":")[0].trim();
             String fields = type.split(":")[1].trim();
             defineType(writer, baseName, className, fields);
         }
 
+        // the base accept() method
+        writer.println();
+        writer.println(" abstract <R> R accept(Visitor<R> visitor);");
+        
         writer.println("}");
         
         writer.close();
+    }
+
+    private static void defineVisitor(
+        PrintWriter writer, String baseName, List<String> types) {
+        writer.println("  interface Visitor <R> {");
+
+        for (String type: types) {
+            String typeName = type.split(":")[0].trim();
+            writer.println("    R visit" + typeName + baseName + "(" +
+                typeName + " " + baseName.toLowerCase() + ");");
+        }
+
+        writer.println("  }");
+        
+        }
+    {
+
     }
 
     private static void defineType (
@@ -60,6 +84,14 @@ public class GenerateAst {
         }
 
         writer.println("    }");
+        
+        // Visitor Pattern.
+        writer.println();
+        writer.println("    @Override");
+        writer.println("    <R> R accept(Visitor<R> visitor) {");
+        writer.println("      return visitor.visit" + className + baseName + "(this);");
+        writer.println("    }");
+
 
         // Fields.
 
