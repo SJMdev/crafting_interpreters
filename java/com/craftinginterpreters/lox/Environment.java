@@ -25,6 +25,7 @@ public class Environment {
     }
 
     void assign(Token name, Object value) {
+
         if (values.containsKey(name.lexeme)) {
             values.put(name.lexeme, value);
             return;
@@ -32,6 +33,7 @@ public class Environment {
 
         if (enclosing != null) {
             enclosing.assign(name, value);
+            return;
         }
         
         throw new RuntimeError(name,
