@@ -24,7 +24,7 @@ class Parser {
     }
 
     private Expr expression() {
-        return equality();
+        return assignment();
     }
 
     private Stmt declaration() {
@@ -49,7 +49,7 @@ class Parser {
         return new Stmt.Print(value);
     }
     private Stmt varDeclaration() {
-        Token name = consume(IDENTIFIER< "Expect variable name.");
+        Token name = consume(IDENTIFIER, "Expect variable name.");
 
         Expr initializer = null;
         if (match(EQUAL)) {
@@ -64,8 +64,26 @@ class Parser {
         consume(SEMICOLON, "Expect ';' after expression.");
         return new Stmt.Expression(expr);
     }
-    // equality -> comparison (  ( "!="  | "==" ) comparison )* ;
 
+    private Expr assignment() {
+        Expr expr = equality();
+
+        if (match(EQUAL)) {
+            Token equals = previous();
+            Expr value = assignment();
+
+            if (expr instanceof Expr.Variable) {
+                Token name = ((Expr.Variable)expr).name;
+                return new Expr.Assign(name, value);
+            }
+
+            error(equals, "Invalid assignment target.");
+        }
+
+        return expr;
+    }
+
+    // equality -> comparison (  ( "!="  | "==" ) comparison )* ;
     private Expr equality() {
         Expr expr = comparison();
         while (match(BANG_EQUAL, EQUAL_EQUAL)) {
