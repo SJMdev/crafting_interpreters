@@ -60,6 +60,12 @@ private static void run(String source) {
     // Stop if there was a syntax error.
     if (hadError) return;
 
+    Resolver resolver = new Resolver(interpreter);
+    resolver.resolve(statements);
+
+    // Stop if there as a resolution error.
+    if (hadError) return;
+
     interpreter.interpret(statements);
     // System.out.println(new AstPrinter().print(expression));
 }
