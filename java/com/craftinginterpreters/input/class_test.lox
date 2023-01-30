@@ -1,0 +1,15 @@
+class Doughnut {
+    init() {
+        this.sound = "munch crunch munch";
+    }
+    cook() {
+        print "Jesse, we have to cook!";
+    }
+}
+
+class BostonCream < Doughnut {}
+
+var breakfast = Doughnut();
+print breakfast.sound;
+
+BostonCream().cook();
