@@ -1,1 +1,1 @@
-clang main.c chunk.c memory.c debug.c value.c
+clang main.c chunk.c memory.c debug.c value.c vm.c
