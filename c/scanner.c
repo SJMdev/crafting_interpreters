@@ -65,6 +65,8 @@ static Token errorToken(const char* message) {
     token.start = message;
     token.length = (int)strlen(message);
     token.line = scanner.line;
+
+    return token;
 }
 
 static void skipWhiteSpace() {
@@ -100,7 +102,7 @@ static TokenType checkKeyword(int start, int length, const char* rest, TokenType
         return TOKEN_IDENTIFIER;
 }
 
-static TokenType identifiertype() {
+static TokenType identifierType() {
     switch(scanner.start[0]) {
         case 'a': return checkKeyword(1,2, "nd", TOKEN_AND);
         case 'c': return checkKeyword(1,4, "lass", TOKEN_CLASS);
@@ -117,7 +119,7 @@ static TokenType identifiertype() {
         case 'i': return checkKeyword(1,1, "f", TOKEN_IF);
         case 'n': return checkKeyword(1,2, "il", TOKEN_NIL);
         case 'o': return checkKeyword(1,1, "r", TOKEN_OR);
-        case 'p': return checkKeyword(1,4, "print", TOKEN_PRINT);
+        case 'p': return checkKeyword(1,4, "rint", TOKEN_PRINT);
         case 'r': return checkKeyword(1,5, "eturn", TOKEN_RETURN);
         case 's': return checkKeyword(1,4, "uper", TOKEN_SUPER);
         case 't' : {
