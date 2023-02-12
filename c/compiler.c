@@ -5,6 +5,11 @@
 #include "compiler.h"
 #include "scanner.h"
 
+#ifdef DEBUG_PRINT_CODE 
+#include "debug.h"
+#endif
+
+
 typedef struct {
     Token current;
     Token previous;
@@ -41,6 +46,7 @@ static Chunk* currentChunk() {
     return compilingChunk;
 }
 
+
 static void errorAt(Token* token, const char* message) {
     if (parser.panicMode) return;
     parser.panicMode = true;
@@ -65,10 +71,6 @@ static void errorAtCurrent(const char* message) {
 static void error(const char* message) {
     errorAt(&parser.previous, message);
 }
-
-
-
-
 
 
 static void advance() {
@@ -120,6 +122,11 @@ static void emitConstant(Value value) {
 
 static void endCompiler() {
     emitReturn();
+#ifdef DEBUG_PRINT_CODE
+    if (!parser.hadError) {
+        disassembleChunk(currentChunk(), "code");
+    }
+#endif
 }
 
 static void expression();
@@ -153,7 +160,20 @@ static void number() {
 
 // e.g. for unary negation: -a.b + c should be (-a.b) +c, not -(a.b + c). 
 static void parsePrecedence(Precedence precedence) {
-    
+    advance();
+    ParseFn prefixRule = getRule(parser.previous.type)->prefix;
+    if (prefixRule == NULL) {
+        error("Expect expression.");
+        return;
+    }
+
+    prefixRule();
+
+    while (precedence <= getRule(parser.current.type)->precedence) {
+        advance();
+        ParseFn infixRule = getRule(parser.previous.type)->infix;
+        infixRule();
+    }
 }
 
 static void unary() {
