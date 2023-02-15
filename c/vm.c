@@ -21,7 +21,7 @@ static void runtimeError(const char* format, ...) {
 
     size_t instruction = vm.ip - vm.chunk->code -1;
     int line = vm.chunk->lines[instruction];
-    fprintf(stderr, "[line %d] in script\n"m, line);
+    fprintf(stderr, "[line %d] in script\n", line);
     resetStack();
 }
 
@@ -83,13 +83,16 @@ static InterpretResult run() {
                 printf("\n");
                 break;                
             }
+            case OP_NIL:      push(NIL_VAL); break;
+            case OP_TRUE:     push(BOOL_VAL(true)); break;
+            case OP_FALSE:    push(BOOL_VAL(false)); break;
             case OP_ADD:      BINARY_OP(NUMBER_VAL, +); break;
             case OP_SUBTRACT: BINARY_OP(NUMBER_VAL, -); break;
             case OP_MULTIPLY: BINARY_OP(NUMBER_VAL, *); break;
             case OP_DIVIDE:   BINARY_OP(NUMBER_VAL, /); break;
             case OP_NEGATE:
             {
-                if (!is_number(peek(0))) {
+                if (!IS_NUMBER(peek(0))) {
                     runtimeError("Operand must be a number.");
                     return INTERPRET_RUNTIME_ERROR;
                 }
