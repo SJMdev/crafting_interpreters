@@ -72,6 +72,13 @@ static Token errorToken(const char* message) {
 static void skipWhiteSpace() {
     for (;;) {
         char c = peek();
+
+        //@NOTE(SMIA) weird ass windows behavior:
+        if ((int)c == 10) {
+            printf("found a weird carriage return thing. advance and break.");
+            advance();
+            return;
+        }
         switch (c) {
             case ' ': 
             case '\r':
@@ -208,5 +215,11 @@ Token scanToken() {
         case '"': return string();
     }
 
+    if ((int)c == 10) {
+        printf("ran into value 10.\n");
+        printf("scanner: %s\n",  scanner.start);
+    }
+
+    printf("unexpected character: %c, %d\n", c, c);
     return errorToken("unexpected character.");
 }
