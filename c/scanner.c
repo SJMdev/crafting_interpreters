@@ -73,16 +73,15 @@ static void skipWhiteSpace() {
     for (;;) {
         char c = peek();
 
-        //@NOTE(SMIA) weird ass windows behavior:
-        if ((int)c == 10) {
-            printf("found a weird carriage return thing. advance and break.");
-            advance();
-            return;
-        }
         switch (c) {
             case ' ': 
             case '\r':
             case '\t':
+                advance();
+                break;
+    //> newline
+            case '\n':
+                scanner.line++;
                 advance();
                 break;
             case '/':
@@ -178,6 +177,9 @@ static Token string() {
 }
 
 Token scanToken() {
+
+    skipWhiteSpace();
+
     scanner.start = scanner.current;
 
     if (isAtEnd()) return makeToken(TOKEN_EOF);
@@ -215,11 +217,5 @@ Token scanToken() {
         case '"': return string();
     }
 
-    if ((int)c == 10) {
-        printf("ran into value 10.\n");
-        printf("scanner: %s\n",  scanner.start);
-    }
-
-    printf("unexpected character: %c, %d\n", c, c);
     return errorToken("unexpected character.");
 }
