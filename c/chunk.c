@@ -1,3 +1,4 @@
+#include <stdio.h>
 #include <stdlib.h>
 #include "chunk.h"
 #include "memory.h"
@@ -25,7 +26,7 @@ void writeChunk(Chunk* chunk, uint8_t byte, int line) {
 
 int addConstant(Chunk* chunk, Value value) {
     if (value.type == VAL_NUMBER) {
-        printf("add constant value, %lf\n",AS_NUMBER(value));
+        printf("add constant value, %lf\n", AS_NUMBER(value));
     }
 
     writeValueArray(&chunk->constants, value);

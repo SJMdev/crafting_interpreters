@@ -83,6 +83,7 @@ static InterpretResult run() {
         double a = AS_NUMBER(pop()); \
         push(valueType(a op b)); \
     } while (false) 
+    
     for (;;) {
 #ifdef DEBUG_TRACE_EXECUTION
         printf("          ");
@@ -145,16 +146,16 @@ static InterpretResult run() {
                 push(NUMBER_VAL(AS_NUMBER(pop())));
                 break;
             } 
+            case OP_RETURN:{
+
+                return INTERPRET_OK;
+            }
             case OP_PRINT: {
                 printValue(pop());
                 printf("\n");
                 break;
             }
-            case OP_RETURN: {
-                printValue(pop());
-                printf("\n");
-                return INTERPRET_OK;
-            }
+            
         }
     }
 #undef READ_BYTE
