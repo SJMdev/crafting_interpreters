@@ -87,13 +87,15 @@ static void errorAt(Token* token, const char* message) {
     parser.hadError = true;
 }
 
+static void error(const char* message) {
+    errorAt(&parser.previous, message);
+}
+
 static void errorAtCurrent(const char* message) {
     errorAt(&parser.current, message);
 }
 
-static void error(const char* message) {
-    errorAt(&parser.previous, message);
-}
+
 
 
 static void advance() {
@@ -238,132 +240,6 @@ static void declaration();
 static ParseRule* getRule(TokenType type);
 static void parsePrecedence(Precedence precedence);
 
-static void binary(bool canAssign) {
-    TokenType operatorType = parser.previous.type;
-    ParseRule* rule = getRule(operatorType);
-    parsePrecedence((Precedence)(rule->precedence + 1));
-
-    switch (operatorType) {
-        case TOKEN_BANG_EQUAL:      emitBytes(OP_EQUAL, OP_NOT); break;
-        case TOKEN_EQUAL_EQUAL:     emitByte(OP_EQUAL); break;
-        case TOKEN_GREATER:         emitByte(OP_GREATER); break;        
-        case TOKEN_GREATER_EQUAL:   emitBytes(OP_LESS, OP_NOT); break;        
-        case TOKEN_LESS:            emitByte(OP_EQUAL); break;        
-        case TOKEN_LESS_EQUAL:      emitBytes(OP_GREATER, OP_NOT); break;        
-        case TOKEN_PLUS:            emitByte(OP_ADD); break;
-        case TOKEN_MINUS:           emitByte(OP_SUBTRACT); break;
-        case TOKEN_STAR:            emitByte(OP_MULTIPLY); break;
-        case TOKEN_SLASH:           emitByte(OP_DIVIDE); break;
-        default:
-            return;
-    }
-}
-
-static uint8_t argumentList() {
-    uint8_t argCount = 0;
-    if (!check(TOKEN_RIGHT_PAREN)) {
-        do {
-            expression();
-            if (argCount == 255) {
-                error("Can't have more than 255 arguments.");
-            }
-            argCount++;
-        } while(match(TOKEN_COMMA));
-    }
-    consume(TOKEN_RIGHT_PAREN, "Expect ')' after arguments.");
-    return argCount;
-}
-
-static void call(bool canAssign) {
-    uint8_t argCount = argumentList();
-    emitBytes(OP_CALL, argCount);
-}
-
-static void literal(bool canAssign) {
-    switch(parser.previous.type) {
-        case TOKEN_FALSE: emitByte(OP_FALSE); break; 
-        case TOKEN_NIL: emitByte(OP_NIL); break;
-        case TOKEN_TRUE: emitByte(OP_TRUE); break;
-        default: return; // unreachable.
-    }
-}
-
-static void grouping(bool canAssign) {
-    expression();
-    consume(TOKEN_RIGHT_PAREN, "Expect ')' after expression.");
-}
-
-static void number(bool canAssign) {
-    double value = strtod(parser.previous.start, NULL);
-    emitConstant(NUMBER_VAL(value));
-}
-
-static void or_(bool canAssign) {
-    int elseJump = emitJump(OP_JUMP_IF_FALSE);
-    int endJump = emitJump(OP_JUMP);
-
-    patchJump(elseJump);
-    emitByte(OP_POP);
-
-    parsePrecedence(PREC_OR);
-    patchJump(endJump);
-}
-
-static void string(bool canAssign) {
-    // trim leading and trailing quotation marks.
-    emitConstant(OBJ_VAL(copyString(parser.previous.start + 1, parser.previous.length -2)));
-}
-static uint8_t identifierConstant(Token* name);
-static int resolveLocal(Compiler* compiler, Token* name);
-
-static void namedVariable(Token name, bool canAssign) {
-    uint8_t getOp, setOp;
-    int arg = resolveLocal(current, &name);
- 
-    if (arg != -1) {
-        getOp = OP_GET_LOCAL;
-        setOp = OP_SET_LOCAL;
-    } else {
-        arg = identifierConstant(&name);
-        getOp = OP_GET_GLOBAL;
-        setOp = OP_SET_GLOBAL;
-    }
-
-    if(canAssign && match(TOKEN_EQUAL)) {
-        expression();
-        emitBytes(setOp, arg);
-    } else {
-        emitBytes(getOp, arg);
-    }
-}
-
-static void variable(bool canAssign) {
-    namedVariable(parser.previous, canAssign);
-}
-
-// e.g. for unary negation: -a.b + c should be (-a.b) +c, not -(a.b + c). 
-static void parsePrecedence(Precedence precedence) {
-    advance();
-    ParseFn prefixRule = getRule(parser.previous.type)->prefix;
-    if (prefixRule == NULL) {
-        error("Expect expression.");
-        return;
-    }
-
-    bool canAssign = precedence <= PREC_ASSIGNMENT;
-    prefixRule(canAssign);
-
-    while (precedence <= getRule(parser.current.type)->precedence) {
-        advance();
-        ParseFn infixRule = getRule(parser.previous.type)->infix;
-        infixRule(canAssign);
-    }
-
-    if (canAssign && match(TOKEN_EQUAL)) {
-        error("Invalid assignment target.");
-    }
-}
-
 static uint8_t identifierConstant(Token* name) {
     return makeConstant(OBJ_VAL(copyString(name->start, name->length)));
 }
@@ -372,7 +248,6 @@ static bool identifiersEqual(Token* a, Token* b) {
     if (a->length != b->length) return false;
     return memcmp(a->start, b->start, a->length) == 0;
 }
-
 // returns index ("stack slot index") of local variable, or sentinel value of -1.
 static int resolveLocal(Compiler* compiler, Token* name) {
     for (int i = compiler->localCount - 1; i >= 0; i--) {
@@ -433,12 +308,10 @@ static uint8_t parseVariable(const char* errorMessage) {
 
     return identifierConstant(&parser.previous);
 }
-
 static void markInitialized() {
     if(current->scopeDepth == 0) return;
     current->locals[current->localCount - 1].depth = current->scopeDepth;
 }
-
 // Declaring is when a variable is added to the scope, and Defining is when it becomes available for use.
 static void defineVariable(uint8_t global) {
     if (current->scopeDepth > 0) {
@@ -449,7 +322,20 @@ static void defineVariable(uint8_t global) {
     emitBytes(OP_DEFINE_GLOBAL, global);
 }
 
-
+static uint8_t argumentList() {
+    uint8_t argCount = 0;
+    if (!check(TOKEN_RIGHT_PAREN)) {
+        do {
+            expression();
+            if (argCount == 255) {
+                error("Can't have more than 255 arguments.");
+            }
+            argCount++;
+        } while(match(TOKEN_COMMA));
+    }
+    consume(TOKEN_RIGHT_PAREN, "Expect ')' after arguments.");
+    return argCount;
+}
 
 static void and_(bool canAssign) {
     int endJump = emitJump(OP_JUMP_IF_FALSE);
@@ -460,6 +346,91 @@ static void and_(bool canAssign) {
     patchJump(endJump);
 }
 
+static void binary(bool canAssign) {
+    TokenType operatorType = parser.previous.type;
+    ParseRule* rule = getRule(operatorType);
+    parsePrecedence((Precedence)(rule->precedence + 1));
+
+    switch (operatorType) {
+        case TOKEN_BANG_EQUAL:      emitBytes(OP_EQUAL, OP_NOT); break;
+        case TOKEN_EQUAL_EQUAL:     emitByte(OP_EQUAL); break;
+        case TOKEN_GREATER:         emitByte(OP_GREATER); break;        
+        case TOKEN_GREATER_EQUAL:   emitBytes(OP_LESS, OP_NOT); break;        
+        case TOKEN_LESS:            emitByte(OP_LESS); break;        
+        case TOKEN_LESS_EQUAL:      emitBytes(OP_GREATER, OP_NOT); break;        
+        case TOKEN_PLUS:            emitByte(OP_ADD); break;
+        case TOKEN_MINUS:           emitByte(OP_SUBTRACT); break;
+        case TOKEN_STAR:            emitByte(OP_MULTIPLY); break;
+        case TOKEN_SLASH:           emitByte(OP_DIVIDE); break;
+        default:
+            return;
+    }
+}
+
+static void call(bool canAssign) {
+    uint8_t argCount = argumentList();
+    emitBytes(OP_CALL, argCount);
+}
+
+static void literal(bool canAssign) {
+    switch(parser.previous.type) {
+        case TOKEN_FALSE: emitByte(OP_FALSE); break; 
+        case TOKEN_NIL: emitByte(OP_NIL); break;
+        case TOKEN_TRUE: emitByte(OP_TRUE); break;
+        default: return; // unreachable.
+    }
+}
+
+static void grouping(bool canAssign) {
+    expression();
+    consume(TOKEN_RIGHT_PAREN, "Expect ')' after expression.");
+}
+
+static void number(bool canAssign) {
+    double value = strtod(parser.previous.start, NULL);
+    emitConstant(NUMBER_VAL(value));
+}
+
+static void or_(bool canAssign) {
+    int elseJump = emitJump(OP_JUMP_IF_FALSE);
+    int endJump = emitJump(OP_JUMP);
+
+    patchJump(elseJump);
+    emitByte(OP_POP);
+
+    parsePrecedence(PREC_OR);
+    patchJump(endJump);
+}
+
+static void string(bool canAssign) {
+    // trim leading and trailing quotation marks.
+    emitConstant(OBJ_VAL(copyString(parser.previous.start + 1, parser.previous.length -2)));
+}
+
+static void namedVariable(Token name, bool canAssign) {
+    uint8_t getOp, setOp;
+    int arg = resolveLocal(current, &name);
+ 
+    if (arg != -1) {
+        getOp = OP_GET_LOCAL;
+        setOp = OP_SET_LOCAL;
+    } else {
+        arg = identifierConstant(&name);
+        getOp = OP_GET_GLOBAL;
+        setOp = OP_SET_GLOBAL;
+    }
+
+    if(canAssign && match(TOKEN_EQUAL)) {
+        expression();
+        emitBytes(setOp, arg);
+    } else {
+        emitBytes(getOp, arg);
+    }
+}
+
+static void variable(bool canAssign) {
+    namedVariable(parser.previous, canAssign);
+}
 static void unary(bool canAssign) {
     TokenType operatorType = parser.previous.type;
 
@@ -516,6 +487,29 @@ ParseRule rules[] = {
     [TOKEN_ERROR]           =          {NULL, NULL, PREC_NONE},
     [TOKEN_EOF]             =          {NULL, NULL, PREC_NONE},
 };
+
+// e.g. for unary negation: -a.b + c should be (-a.b) +c, not -(a.b + c). 
+static void parsePrecedence(Precedence precedence) {
+    advance();
+    ParseFn prefixRule = getRule(parser.previous.type)->prefix;
+    if (prefixRule == NULL) {
+        error("Expect expression.");
+        return;
+    }
+
+    bool canAssign = precedence <= PREC_ASSIGNMENT;
+    prefixRule(canAssign);
+
+    while (precedence <= getRule(parser.current.type)->precedence) {
+        advance();
+        ParseFn infixRule = getRule(parser.previous.type)->infix;
+        infixRule(canAssign);
+    }
+
+    if (canAssign && match(TOKEN_EQUAL)) {
+        error("Invalid assignment target.");
+    }
+}
 
 static ParseRule* getRule(TokenType type) {
     return &rules[type];
@@ -743,6 +737,8 @@ static void statement() {
        expressionStatement();
     }
 }
+
+
 
 ObjFunction* compile(const char* source) {
     initScanner(source);

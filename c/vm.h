@@ -1,7 +1,6 @@
 #ifndef clox_vm_h
 #define clox_vm_h
 
-#include "chunk.h"
 #include "object.h"
 #include "table.h"
 #include "value.h"
@@ -16,10 +15,10 @@ typedef struct {
     Value* slots;
 } CallFrame;
 
-
 typedef struct {
     CallFrame frames[FRAMES_MAX];
     int frameCount;
+    
     Value stack[STACK_MAX];
     Value* stackTop;
     Table globals;

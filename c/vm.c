@@ -4,14 +4,13 @@
 #include <time.h>
 
 #include "common.h"
+#include "compiler.h"
 #include "debug.h"
 #include "object.h"
 #include "memory.h"
-#include "compiler.h"
 #include "vm.h"
 
 VM vm;
-
 static Value clockNative(int argCount, Value* args) {
     return NUMBER_VAL((double)clock() / CLOCKS_PER_SEC);
 }
@@ -177,8 +176,6 @@ static InterpretResult run() {
             case OP_CONSTANT: {
                 Value constant = READ_CONSTANT();
                 push(constant);
-                printValue(constant);
-                printf("\n");
                 break;                
             }
             case OP_NIL:      push(NIL_VAL); break;
@@ -255,7 +252,12 @@ static InterpretResult run() {
                     runtimeError("Operand must be a number.");
                     return INTERPRET_RUNTIME_ERROR;
                 }
-                push(NUMBER_VAL(AS_NUMBER(pop())));
+                push(NUMBER_VAL(-AS_NUMBER(pop())));
+                break;
+            }
+            case OP_PRINT: {
+                printValue(pop());
+                printf("\n");
                 break;
             }
             case OP_JUMP: {
@@ -270,8 +272,7 @@ static InterpretResult run() {
             }
             case OP_LOOP: {
                 uint16_t offset = READ_SHORT();
-                frame->
-                ip -= offset;
+                frame->ip -= offset;
                 break;
             }
             case OP_CALL: {
@@ -296,11 +297,7 @@ static InterpretResult run() {
                 frame = &vm.frames[vm.frameCount - 1];
                 break;
             }
-            case OP_PRINT: {
-                printValue(pop());
-                printf("\n");
-                break;
-            }
+
             
         }
     }

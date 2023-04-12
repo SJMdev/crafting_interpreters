@@ -3,6 +3,14 @@
 #include "debug.h"
 #include "value.h"
 
+
+void disassembleChunk(Chunk* chunk, const char* name) {
+    printf("==%s ==\n", name);
+    for (int offset = 0; offset < chunk->count;){
+        offset = disassembleInstruction(chunk, offset);
+    }
+}
+
 // returns the next usable offset in the chunk that we can use.
 static int constantInstruction(const char* name, Chunk* chunk,
     int offset) {
@@ -35,7 +43,7 @@ int disassembleInstruction(Chunk* chunk, int offset) {
     printf("%04d ", offset);
     if (offset > 0 &&
         chunk->lines[offset] == chunk->lines[offset -1]) {
-            printf(" |   ");
+            printf("   | ");;
     } else {
         printf("%4d ", chunk->lines[offset]);
     }
@@ -97,11 +105,3 @@ int disassembleInstruction(Chunk* chunk, int offset) {
             return offset + 1;
     }
 }
-
-void disassembleChunk(Chunk* chunk, const char* name) {
-    printf("==%s ==\n", name);
-    for (int offset = 0; offset < chunk->count;){
-        offset = disassembleInstruction(chunk, offset);
-    }
-}
-
