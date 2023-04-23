@@ -1,0 +1,26 @@
+class Brioche {}
+print Brioche;
+
+class Scone {
+    topping(first, second) {
+        print "scone with " + first + " and " + second; 
+    }
+}
+
+var scone = Scone();
+scone.topping("berries", "cream");
+
+class CoffeeMaker { 
+    init(coffee) {
+        this.coffee = coffee;
+    }
+
+    brew() {
+        print "enjoy your cup of " + this.coffee;
+
+        this.coffee = nil;
+    }
+}
+
+var maker = CoffeeMaker("coffee and chicory");
+maker.brew();
